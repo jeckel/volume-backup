@@ -23,8 +23,12 @@ function backup_volume() {
 }
 
 
-VOLUMES_TO_BACKUP=( $(mount | grep ext4 | grep -v /etc | grep -v ${BACKUP_TARGET_DIRECTORY} | cut -d\  -f 3) )
-for VOLUME in "${VOLUMES_TO_BACKUP[@]}"
-do
+if [ -z ${VOLUME} ] ; then
+    VOLUMES_TO_BACKUP=( $(mount | grep ext4 | grep -v /etc | grep -v ${BACKUP_TARGET_DIRECTORY} | cut -d\  -f 3) )
+    for VOLUME in "${VOLUMES_TO_BACKUP[@]}"
+    do
+        backup_volume $VOLUME
+    done
+else
     backup_volume $VOLUME
-done
+fi
