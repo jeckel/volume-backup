@@ -1,23 +1,30 @@
 #!/bin/bash
 
 readonly BACKUP_TARGET_DIRECTORY=/backups
-
-NOW=$(date +"%Y%m%d%H%M%S")
-
-VOLUMES_TO_BACKUP=( $(mount | grep ext4 | grep -v /etc | grep -v ${BACKUP_TARGET_DIRECTORY} | cut -d\  -f 3) )
-
-TARGET=/backups/backup_${NOW}.tar.gz
+readonly NOW=$(date +"%Y%m%d%H%M%S")
 
 # Retrieve local user UID and group GID
-cd /backups/
+cd ${BACKUP_TARGET_DIRECTORY}
 set -- `ls -nd .` && LOCAL_UID=$3 && LOCAL_GID=$4
 
+
+function backup_volume() {
+    local SRC=$1
+    local TARGET_FILE=backup_$(basename ${SRC})_${NOW}.tar.gz
+    local TARGET=${BACKUP_TARGET_DIRECTORY}/${TARGET_FILE}
+
+    printf "Backup volume '$SRC' : "
+
+    cd $(dirname ${SRC})
+    tar -czf ${TARGET} $(basename ${SRC})
+    chown $LOCAL_UID:$LOCAL_GID ${TARGET}
+
+    printf "Done (${TARGET_FILE})\n"
+}
+
+
+VOLUMES_TO_BACKUP=( $(mount | grep ext4 | grep -v /etc | grep -v ${BACKUP_TARGET_DIRECTORY} | cut -d\  -f 3) )
 for VOLUME in "${VOLUMES_TO_BACKUP[@]}"
 do
-    printf "Backup volume : ${VOLUME} ... "
-	TARGET=/backups/backup_$(basename ${VOLUME})_${NOW}.tar.gz
-   	cd $(dirname ${VOLUME})
-    tar -czf ${TARGET} $(basename ${VOLUME})
-    chown $LOCAL_UID:$LOCAL_GID ${TARGET}
-    printf "Done\n"
+    backup_volume $VOLUME
 done
