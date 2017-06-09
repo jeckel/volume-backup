@@ -4,13 +4,13 @@ BACKUP_SCHEDULE=${SCHEDULE:-daily}
 
 case $BACKUP_SCHEDULE in
 	hourly)
-		cp /usr/local/bin/backup.sh /etc/periodic/hourly
+		cp /usr/local/bin/backup.sh /etc/periodic/hourly/backup
 		;;
 	daily)
-		cp /usr/local/bin/backup.sh /etc/periodic/daily
+		cp /usr/local/bin/backup.sh /etc/periodic/daily/backup
 		;;
 	weekly)
-		cp /usr/local/bin/backup.sh /etc/periodic/weekly
+		cp /usr/local/bin/backup.sh /etc/periodic/weekly/backup
 		;;
 	*)
 		echo "$BACKUP_SCHEDULE /usr/local/bin/backup.sh" >> /etc/crontabs/root
