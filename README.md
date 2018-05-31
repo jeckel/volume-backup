@@ -59,7 +59,7 @@ Some environment variable has default value, so you needn't set all of them in m
 
 ## Example
 
-You can look at the [test docker-compose.yml file](tests/docker-compose.yml) to see some examples.
+You can look at the [test docker-compose.yml file](https://github.com/jeckel/volume-backup/blob/master/tests/docker-compose.yml) to see some examples.
 
 ## License
 Released under the MIT License.

@@ -12,9 +12,10 @@ volumes:
 # Declare services
 services:
   backup:
-    build:
-      context: ../
-      dockerfile: Dockerfile
+    image: jeckel/volume-backup:latest
+#    build:
+#      context: ../
+#      dockerfile: Dockerfile
     volumes:
       - ./backups:/var/backups
       - source:/var/source
