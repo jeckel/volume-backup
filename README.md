@@ -44,8 +44,10 @@ docker run -it --rm \
 Some environment variable has default value, so you needn't set all of them in most cases.
 
 * `SCHEDULE`: Schedule of backups, default is `"daily"`
-* `VOLUME` : Specify which mounted volume to backup, is not defined, all mounted volumes (except `/backups`) will be backup
-* `DUMP_DEBUG` : If set to `"true"` then show verbose infos, default is `"false"`
+* `TARGET_DIRECTORY`: Folder in which backups will be stored, default is `/backups` (it should be a persistent volume of some sort)
+* `SOURCE_DIRECTORIES`: Specify which directories will be backups, if not specified all mounted volumes will be backup. You can specify multiple volume by seperating them with a space (`SOURCE_DIRECTORIS=/var/source /var/project` ) 
+* `TAR_OPTIONS`: Additional options you want to add to the tar command (like exclude some directories)
+* `KEEP_NB_BACKUP`: If defined, only the last `x` backups will be kept, other backup will be deleted. If not specified, no backups are deleted by this script. 
 
 ## Schedule syntax:
 
@@ -55,54 +57,9 @@ Some environment variable has default value, so you needn't set all of them in m
 * `"monthly"`: 05:00 on 1st every month.
 * `"0 5 * * 6"`: crontab syntax.
 
-## Example in `docker-compose` with Wordpress
+## Example
 
-```yml
-version: '2'
-services:
-  wordpress:
-    image: wordpress
-    depends_on:
-      - mysql
-    ports:
-      - 8080:80
-    environment:
-      - WORDPRESS_DB_PASSWORD=wordpress
-  mysql:
-    image: mariadb
-    environment:
-      - MYSQL_ROOT_PASSWORD=wordpress
-      - MYSQL_DATABASE=wordpress
-      - MYSQL_USER=wordpress
-      - MYSQL_PASSWORD=wordpress
-  backup:
-    image: jeckel/volume-backup
-    depends_on:
-      - wordpress
-      - mysql
-    volumes:
-      - ../backups:/backups
-    volumes_from:
-      - wordpress
-      - mysql
-```
-
-This docker-compose file show how to configure the backup.
-
-You can start the wordpress site with this command :
-
-```shell
-docker-compose up
-```
-
-It will start MySQL, Wordpress, and the Backup container with daily backup already scheduled.
-
-You can then trigger an on-demand backup with this line :
-
-```shell
-docker-compose exec backup backup.sh
-```
-
+You can look at the [test docker-compose.yml file](tests/docker-compose.yml) to see some examples.
 
 ## License
 Released under the MIT License.

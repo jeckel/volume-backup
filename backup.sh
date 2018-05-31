@@ -1,59 +1,67 @@
 #!/bin/bash
 
-readonly BACKUP_DIRECTORY=/backups
 readonly NOW=$(date +"%Y%m%d%H%M%S")
-readonly DUMP_DEBUG_FLAG=${DUMP_DEBUG:-false}
 
-
-# Retrieve local user UID and group GID
-cd ${BACKUP_DIRECTORY}
-set -- `ls -nd .` && LOCAL_UID=$3 && LOCAL_GID=$4
-
-if [ $DUMP_DEBUG_FLAG = 'true' ]; then
-  TAR_OPTIONS="-v"
-else
-  TAR_OPTIONS=""
+if [ -z ${TARGET_DIRECTORY} ]; then
+    TARGET_DIRECTORY = /backups
 fi
 
 # ----------------------------------------------------------
 # Backup a mounted volume
 # @usage
-#    backup_volume <path_to_backup>
+#    backup_volume <path_to_backup> <target_folder> [<tar_options>]
 #
-# @param    path to volume
-# @variable $NOW is read
-# @variable $BACKUP_DIRECTORY is read
-# @variable $LOCAL_UID is read
-# @variable $LOCAL_GID is read
-# @variable $TAR_OPTIONS is read
-# @variable $DUMP_DEBUG_FLAG is read
+# @param    path to source folder
+# @param    path to target folder
+# @param    tar options
 function backup_volume() {
-    local SRC=$1
-    local TARGET_FILE=backup_$(basename ${SRC})_${NOW}.tar.gz
-    local TARGET=${BACKUP_DIRECTORY}/${TARGET_FILE}
+    local src=$1
+    local targetDir=$2
+    local tarOptions=$3
+    local target=${targetDir}/backup_$(basename ${src})_$(date +"%Y%m%d%H%M%S").tar.gz
+    local uid
+    local gid
 
-    if [ $DUMP_DEBUG_FLAG = 'true' ]; then
-        printf "Start backup volume '${SRC}'...\n"
-    fi
+    cd ${targetDir}
+    set -- `ls -nd .` && uid=$3 && gid=$4
 
-    cd $(dirname ${SRC})
-    tar ${TAR_OPTIONS} -czf ${TARGET} $(basename ${SRC})
-    chown $LOCAL_UID:$LOCAL_GID ${TARGET}
-
-    if [ $DUMP_DEBUG_FLAG = 'true' ]; then
-        printf "End backup volume '${SRC}' (${TARGET_FILE})\n"
-    fi
+    cd ${src}
+    tar ${tarOptions} -czf ${target} .
+    chown $uid:$gid ${target}
 }
 
+# ----------------------------------------------------------
+# Cleanup obsolete backup
+#
+# @param    path to source folder
+# @param    path to target folder
+# @param    nb backup to keep
+function cleanup() {
+    local src=$1
+    local targetDir=$2
+    local backupMask=${targetDir}/backup_$(basename ${src})_*.tar.gz
+    local keepHistory=$3
 
-# If env variable $VOLUME is not defined, backup all mounted volumes
-if [ -z ${VOLUME} ] ; then
-    # Take only ext4 directories, exclude systems directories (/etc) and the backup directory
-    VOLUMES_TO_BACKUP=( $(mount | grep ext4 | grep -v /etc | grep -v ${BACKUP_DIRECTORY} | cut -d\  -f 3) )
-    for VOLUME in "${VOLUMES_TO_BACKUP[@]}"
-    do
-        backup_volume $VOLUME
-    done
+    local target=$2/backup_$(basename ${src})_$(date +"%Y%m%d%H%M%S").tar.gz
+
+    # Keep only the last "$keepHistory" backups
+    ls -1dr ${backupMask} | tail -n +$((keepHistory + 1)) | xargs rm -rf
+}
+
+# If env variable $SOURCE_DIRECTORIES is not defined, backup all mounted volumes
+if [ -z "${SOURCE_DIRECTORIES}" ] ; then
+    # Take only docker mounted directories, exclude systems directories (/etc) and the backup directory
+    sourceToBackup=( $(mount | grep '^/[^/]' | grep -v /etc | grep -v 'on / ' | grep -v ${TARGET_DIRECTORY} | cut -d\  -f 3) )
 else
-    backup_volume $VOLUME
+    IFS=' ' read -r -a sourceToBackup <<< "${SOURCE_DIRECTORIES}"
 fi
+
+for source in "${sourceToBackup[@]}"
+do
+    echo ${source}
+    backup_volume ${source} ${TARGET_DIRECTORY} "${TAR_OPTIONS}"
+
+    if [ ! -z ${KEEP_NB_BACKUP} ] ; then
+        cleanup ${source} ${TARGET_DIRECTORY} ${KEEP_NB_BACKUP}
+    fi
+done
